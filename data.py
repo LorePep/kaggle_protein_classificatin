@@ -1,49 +1,51 @@
-import os, sys
+import os
+import sys
+import warnings
+from collections import Counter
+from itertools import chain
+
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import skimage.io
 from skimage.transform import resize
 from imgaug import augmenters as iaa
 from sklearn.model_selection import train_test_split
-import cv2
-
-from itertools import chain
-from collections import Counter
-
 from tqdm import tqdm
 
-import warnings
 warnings.filterwarnings("ignore")
 
 
-class data_generator:
-    
+class DataGenerator(object):
     def create_train(dataset_info, batch_size, shape, augument=True):
         while True:
             random_indexes = np.random.choice(len(dataset_info), batch_size)
+
             batch_images = np.empty((batch_size, shape[0], shape[1], shape[2]))
             batch_labels = np.zeros((batch_size, 28))
 
             for i, idx in enumerate(random_indexes):
-                image = data_generator.load_image(
-                    dataset_info.iloc[idx]['path'], shape)   
+                image = DataGenerator.load_image(dataset_info.iloc[idx]['path'], shape)
                 if augument:
-                    image = data_generator.augment(image)
+                    image = DataGenerator.augment(image)
+
                 batch_images[i] = image
                 batch_labels[i][dataset_info.iloc[idx]['target_list']] = 1
+
             yield batch_images, batch_labels
             
     
     def load_image(path, shape):
-        colors = ["red","green","blue","yellow"]
+        colors = ["red", "green", "blue", "yellow"]
         flags = cv2.IMREAD_GRAYSCALE
         imgs = []
 
         for color in colors:
-            img = cv2.imread(path+'_'+color+'.png', flags).astype(np.float32)/255
+            img = cv2.imread(path+'_'+color+'.png', flags).astype(np.float32) / 255
             img = cv2.resize(img, (shape[0], shape[1]), cv2.INTER_AREA)
-            imgs.append(img)  
+            imgs.append(img)
+
         return np.stack(imgs, axis=-1)
             
     def augment(image):
@@ -58,6 +60,7 @@ class data_generator:
             ])], random_order=True)
         
         image_aug = augment_img.augment_image(image)
+
         return image_aug
 
 
@@ -84,6 +87,7 @@ def split_data(data):
                  test_size = 0.3, 
                   # hack to make stratification work                  
                  stratify = data['Target'].map(lambda x: x[:3] if '27' not in x else '0'))
+
     print(raw_train_df.shape[0], 'training masks')
     print(valid_df.shape[0], 'validation masks')
 
